@@ -21,16 +21,35 @@ import (
 )
 
 func Condition(r *rand.Rand, patientIdx int, conditionIdx int, date time.Time) Object {
-	return Object{
+	condition := Object{
 		"resourceType":  "Condition",
 		"id":            fmt.Sprintf("bbmri-%d-condition-%d", patientIdx, conditionIdx),
 		"meta":          meta("https://fhir.bbmri.de/StructureDefinition/Condition"),
 		"subject":       patientReference(patientIdx),
-		"code":          codeableConcept(codingWithVersion("http://hl7.org/fhir/sid/icd-10", "2016", randIcd10Code(r))),
 		"onsetDateTime": date.Format("2006-01-02"),
 	}
+
+	code := randIcd10Code(r)
+	if code != "empty" {
+		// only generate coding + codeableConcept if code is non-empty
+		coding := codingWithVersion("http://hl7.org/fhir/sid/icd-10", "2016", code)
+		if coding != nil {
+			cc := codeableConcept(coding)
+			if cc != nil {
+				condition["code"] = cc
+			}
+		}
+	}
+
+	return condition
 }
 
+
+
 func randIcd10Code(r *rand.Rand) string {
+	// 5% chance to return a null-equivalent
+	if r.Float64() < 0.05 {
+		return "empty"
+	}
 	return fmt.Sprintf("%s%02d.%d", string(rune(65+r.Intn(26))), r.Intn(100), r.Intn(10))
 }
